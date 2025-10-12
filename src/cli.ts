@@ -6,8 +6,13 @@ import { StorageManager } from './core/storage-manager.js';
 import { ProjectDetector } from './core/project-detector.js';
 import { ConfigManager } from './core/config-manager.js';
 import { HistoryWatcher } from './core/watcher.js';
+import { SyncDaemon } from './core/daemon.js';
 import { updateGitignore, getRecommendedGitignoreEntries } from './utils/git.js';
 import type { StorageMode } from './types/index.js';
+import { spawn } from 'node:child_process';
+import { writeFile, readFile, unlink } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 
 const program = new Command();
 const configManager = new ConfigManager();
@@ -350,6 +355,144 @@ configCommand
   .action(() => {
     configManager.reset();
     console.log(chalk.green('✓ Configuration reset to defaults'));
+  });
+
+/**
+ * Daemon commands for background auto-sync
+ */
+const daemonCommand = program
+  .command('daemon')
+  .description('Manage background auto-sync daemon');
+
+daemonCommand
+  .command('start')
+  .description('Start the background sync daemon')
+  .option('--paths <paths...>', 'Custom paths to monitor (default: ~/Projects, ~/code)')
+  .action(async (options) => {
+    try {
+      const pidFile = join(homedir(), '.claude-local-daemon.pid');
+
+      // Check if already running
+      try {
+        const pid = await readFile(pidFile, 'utf-8');
+        console.log(chalk.yellow(`Daemon already running (PID: ${pid})`));
+        console.log(chalk.gray('Use `claude-local daemon stop` to stop it'));
+        return;
+      } catch {
+        // Not running, continue
+      }
+
+      console.log(chalk.blue('Starting claude-local daemon...'));
+
+      const searchPaths = options.paths || [
+        join(homedir(), 'Projects'),
+        join(homedir(), 'code'),
+        join(homedir(), 'src'),
+      ];
+
+      console.log(chalk.gray(`Monitoring paths:`));
+      searchPaths.forEach((p: string) => console.log(chalk.gray(`  - ${p}`)));
+
+      const daemon = new SyncDaemon(searchPaths);
+      await daemon.start();
+
+      // Save PID
+      await writeFile(pidFile, process.pid.toString());
+
+      console.log(chalk.green('✓ Daemon started'));
+      console.log(chalk.gray('\nThe daemon will:'));
+      console.log(chalk.gray('  - Auto-discover projects with .claude folders'));
+      console.log(chalk.gray('  - Bidirectionally sync conversations'));
+      console.log(chalk.gray('  - Watch for new projects'));
+      console.log(chalk.gray('\nUse `claude-local daemon stop` to stop'));
+
+      // Keep process running
+      process.on('SIGINT', async () => {
+        console.log(chalk.yellow('\nStopping daemon...'));
+        await daemon.stop();
+        await unlink(pidFile).catch(() => {});
+        process.exit(0);
+      });
+
+      process.on('SIGTERM', async () => {
+        await daemon.stop();
+        await unlink(pidFile).catch(() => {});
+        process.exit(0);
+      });
+    } catch (error) {
+      console.error(
+        chalk.red('Error starting daemon:'),
+        error instanceof Error ? error.message : error
+      );
+      process.exit(1);
+    }
+  });
+
+daemonCommand
+  .command('stop')
+  .description('Stop the background sync daemon')
+  .action(async () => {
+    try {
+      const pidFile = join(homedir(), '.claude-local-daemon.pid');
+
+      try {
+        const pid = await readFile(pidFile, 'utf-8');
+        console.log(chalk.blue(`Stopping daemon (PID: ${pid})...`));
+
+        // Send SIGTERM to daemon
+        process.kill(parseInt(pid), 'SIGTERM');
+
+        // Wait a moment then remove PID file
+        setTimeout(async () => {
+          await unlink(pidFile).catch(() => {});
+          console.log(chalk.green('✓ Daemon stopped'));
+        }, 1000);
+      } catch {
+        console.log(chalk.yellow('Daemon is not running'));
+      }
+    } catch (error) {
+      console.error(
+        chalk.red('Error stopping daemon:'),
+        error instanceof Error ? error.message : error
+      );
+      process.exit(1);
+    }
+  });
+
+daemonCommand
+  .command('status')
+  .description('Show daemon status')
+  .action(async () => {
+    try {
+      const pidFile = join(homedir(), '.claude-local-daemon.pid');
+
+      try {
+        const pid = await readFile(pidFile, 'utf-8');
+
+        // Check if process is actually running
+        try {
+          process.kill(parseInt(pid), 0); // Doesn't kill, just checks
+          console.log(chalk.bold('\nDaemon Status:'));
+          console.log(chalk.green('  Running'));
+          console.log(chalk.gray(`  PID: ${pid}`));
+          console.log(chalk.gray(`\nUse 'claude-local daemon stop' to stop it`));
+        } catch {
+          // PID file exists but process is dead
+          console.log(chalk.yellow('Daemon is not running (stale PID file)'));
+          await unlink(pidFile).catch(() => {});
+        }
+      } catch {
+        console.log(chalk.bold('\nDaemon Status:'));
+        console.log(chalk.gray('  Not running'));
+        console.log(chalk.gray(`\nUse 'claude-local daemon start' to start it`));
+      }
+    } catch (error) {
+      console.error(
+        chalk.red('Error checking daemon status:'),
+        error instanceof Error ? error.message : error
+      );
+      process.exit(1);
+    }
   });
 
 program.parse();

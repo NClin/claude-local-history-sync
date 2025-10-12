@@ -30,63 +30,78 @@ npx claude-local-storage init
 
 ## Quick Start
 
-### 1. Initialize Local Storage
+### Automatic Mode (Recommended)
 
-Navigate to your project and initialize local storage:
+**One-time setup:**
+
+```bash
+# Install globally
+npm install -g claude-local-storage
+
+# Start the background daemon
+claude-local daemon start
+```
+
+**That's it!** The daemon now:
+- Auto-discovers all projects with `.claude` folders
+- Bidirectionally syncs conversations automatically
+- Makes conversations available in Claude Code via `/resume`
+- Works transparently in the background
+
+When you clone a project with a `.claude` folder, conversations are automatically available!
+
+### Manual Mode
+
+If you prefer manual control:
 
 ```bash
 cd /path/to/your/project
-claude-local init
-```
-
-This will:
-- Create `.claude/history/` directory
-- Add recommended entries to `.gitignore`
-- Create a README explaining the structure
-
-### 2. Sync Existing Conversations
-
-Import conversations from global storage:
-
-```bash
-claude-local sync
-```
-
-### 3. Auto-Sync (Optional)
-
-Watch for changes and automatically sync:
-
-```bash
-claude-local watch
+claude-local init           # Initialize local storage
+claude-local sync           # Import existing conversations
+claude-local watch          # Watch for changes (optional)
 ```
 
 ## Common Workflows
 
-### Moving a Project to a New Machine/Location
+### With Daemon Running (Automatic)
+
+**Clone a project:**
+```bash
+git clone https://github.com/you/project.git
+cd project
+# That's it! Daemon auto-syncs, conversations available immediately in Claude Code
+```
+
+**Start a new project:**
+```bash
+cd my-new-project
+claude-local init
+# Daemon automatically discovers and monitors it
+claude  # Use Claude Code normally
+```
+
+**Share with team:**
+```bash
+git add .claude/
+git commit -m "Add conversation history"
+git push
+# Team members with daemon running get conversations automatically!
+```
+
+### Without Daemon (Manual)
+
+**Moving a Project:**
 
 When you move your project (via git clone, cloud storage, etc.), the conversation history moves with it in the `.claude` folder. To make these conversations available in Claude Code:
 
 ```bash
-# Navigate to your project
 cd /path/to/your/project
-
-# Restore conversations to global storage
-claude-local sync --to-global
-
-# Now use Claude Code as normal
-claude
-
-# Use /resume to access your conversations
+claude-local sync --to-global    # Restore to global
+claude                           # Use Claude Code
+# Use /resume to access conversations
 ```
 
-**What happens:**
-1. Your local `.claude/history/` contains all the conversations
-2. `sync --to-global` copies them to Claude Code's global storage
-3. `/resume` in Claude Code now shows your project's conversations
-
-### Backing Up Before Moving
-
-Before moving a project, ensure conversations are saved locally:
+**Backing Up:**
 
 ```bash
 cd /path/to/your/project
@@ -177,6 +192,31 @@ claude-local config show
 # Reset to defaults
 claude-local config reset
 ```
+
+####  `claude-local daemon` (Automatic Mode)
+
+Manage the background sync daemon for automatic, transparent syncing.
+
+```bash
+# Start the daemon (monitors ~/Projects, ~/code, ~/src by default)
+claude-local daemon start
+
+# Start with custom paths
+claude-local daemon start --paths ~/work ~/personal/projects
+
+# Check daemon status
+claude-local daemon status
+
+# Stop the daemon
+claude-local daemon stop
+```
+
+**What the daemon does:**
+- Automatically discovers all projects with `.claude` folders
+- Watches for file changes in both local and global storage
+- Bidirectionally syncs conversations in real-time
+- Makes conversations instantly available in Claude Code
+- Runs transparently in the background
 
 ## Storage Modes
 
