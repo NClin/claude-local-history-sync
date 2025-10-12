@@ -80,8 +80,15 @@ describe('Git Utilities', () => {
 
     it('should not add duplicate entries', async () => {
       await updateGitignore(testDir, ['/.claude/history/']);
+
+      // Verify first call created the file
+      const firstContent = await readFile(join(testDir, '.gitignore'), 'utf-8');
+      expect(firstContent).toContain('/.claude/history/');
+
+      // Call again with same entry
       await updateGitignore(testDir, ['/.claude/history/']);
 
+      // File should still exist with entry only once
       const content = await readFile(join(testDir, '.gitignore'), 'utf-8');
       const count = (content.match(/\/\.claude\/history\//g) || []).length;
       expect(count).toBe(1);

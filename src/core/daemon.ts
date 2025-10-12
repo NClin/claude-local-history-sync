@@ -273,6 +273,7 @@ export class SyncDaemon {
     // Close global watcher
     if (this.globalWatcher) {
       await this.globalWatcher.close();
+      this.globalWatcher = null;
     }
 
     this.projects.clear();
