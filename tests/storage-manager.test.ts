@@ -169,7 +169,8 @@ describe('StorageManager', () => {
       await mkdir(projectRoot, { recursive: true });
       await storageManager.initializeLocalStorage(projectRoot);
 
-      const localHistory = join(projectRoot, '.claude', 'history');
+      const localPath = join(projectRoot, '.claude');
+      const localHistory = join(localPath, 'history');
       const conversationData = {
         workingDirectory: projectRoot,
         messages: [
@@ -184,13 +185,51 @@ describe('StorageManager', () => {
         JSON.stringify(conversationData)
       );
 
-      const metadata = await storageManager.getConversationMetadata(projectRoot);
+      const metadata = await storageManager.getConversationMetadata(localPath);
 
       expect(metadata).toHaveLength(1);
       expect(metadata[0].id).toBe('conv-test');
       expect(metadata[0].messageCount).toBe(2);
       expect(metadata[0].title).toBe('Test Conversation');
       expect(metadata[0].projectPath).toBe(projectRoot);
+    });
+  });
+
+  describe('syncToGlobal', () => {
+    it('should sync conversations from local to global', async () => {
+      const projectRoot = join(testDir, 'project');
+      await mkdir(projectRoot, { recursive: true });
+      await storageManager.initializeLocalStorage(projectRoot);
+
+      // Create conversation in local storage
+      const localHistory = join(projectRoot, '.claude', 'history');
+      const conversationData = {
+        workingDirectory: projectRoot,
+        messages: [{ role: 'user', content: 'test' }],
+      };
+
+      await writeFile(
+        join(localHistory, 'conv-local.json'),
+        JSON.stringify(conversationData)
+      );
+
+      const result = await storageManager.syncToGlobal(projectRoot);
+
+      expect(result.success).toBe(true);
+      expect(result.filesProcessed).toBe(1);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should fail if local storage not initialized', async () => {
+      const projectRoot = join(testDir, 'project');
+      await mkdir(projectRoot, { recursive: true });
+
+      const result = await storageManager.syncToGlobal(projectRoot);
+
+      expect(result.success).toBe(false);
+      expect(result.filesProcessed).toBe(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].message).toContain('not initialized');
     });
   });
 });
