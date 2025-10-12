@@ -82,6 +82,7 @@ program
   .command('sync')
   .description('Sync conversations between global and local storage')
   .option('--from-global', 'Sync from global to local (default)')
+  .option('--to-global', 'Sync from local to global (makes conversations available in Claude Code)')
   .option('--bidirectional', 'Sync in both directions')
   .option('--dry-run', 'Show what would be synced without syncing')
   .action(async (options) => {
@@ -100,33 +101,62 @@ program
         configManager.getGlobalStoragePath()
       );
 
-      console.log(chalk.blue('Syncing conversations...'));
-
       if (options.dryRun) {
         console.log(chalk.gray('(Dry run - no files will be modified)'));
         // In a real implementation, we'd show what would be synced
         return;
       }
 
-      const result = await storageManager.syncToLocal(project.root, {
-        bidirectional: options.bidirectional,
-      });
+      // Determine sync direction
+      if (options.toGlobal) {
+        console.log(chalk.blue('Syncing conversations to global storage...'));
+        console.log(chalk.gray('This makes local conversations available in Claude Code'));
 
-      if (result.success) {
-        console.log(
-          chalk.green(
-            `✓ Synced ${result.filesProcessed} conversation(s) in ${result.duration}ms`
-          )
-        );
+        const result = await storageManager.syncToGlobal(project.root);
+
+        if (result.success) {
+          console.log(
+            chalk.green(
+              `✓ Synced ${result.filesProcessed} conversation(s) to global in ${result.duration}ms`
+            )
+          );
+          console.log(
+            chalk.gray('\nYou can now use /resume in Claude Code to access these conversations')
+          );
+        } else {
+          console.log(
+            chalk.yellow(
+              `⚠ Sync completed with ${result.errors.length} error(s)`
+            )
+          );
+          result.errors.forEach((error) => {
+            console.error(chalk.red(`  - ${error.message}`));
+          });
+        }
       } else {
-        console.log(
-          chalk.yellow(
-            `⚠ Sync completed with ${result.errors.length} error(s)`
-          )
-        );
-        result.errors.forEach((error) => {
-          console.error(chalk.red(`  - ${error.message}`));
+        // Default: sync from global to local
+        console.log(chalk.blue('Syncing conversations from global storage...'));
+
+        const result = await storageManager.syncToLocal(project.root, {
+          bidirectional: options.bidirectional,
         });
+
+        if (result.success) {
+          console.log(
+            chalk.green(
+              `✓ Synced ${result.filesProcessed} conversation(s) in ${result.duration}ms`
+            )
+          );
+        } else {
+          console.log(
+            chalk.yellow(
+              `⚠ Sync completed with ${result.errors.length} error(s)`
+            )
+          );
+          result.errors.forEach((error) => {
+            console.error(chalk.red(`  - ${error.message}`));
+          });
+        }
       }
     } catch (error) {
       console.error(

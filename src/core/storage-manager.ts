@@ -211,6 +211,75 @@ Use \`claude-local\` CLI to manage local storage:
   }
 
   /**
+   * Sync conversations from local to global storage (reverse sync)
+   * This makes local conversations available in Claude Code
+   */
+  async syncToGlobal(projectRoot: string): Promise<SyncResult> {
+    const startTime = Date.now();
+    const errors: Error[] = [];
+    let filesProcessed = 0;
+
+    try {
+      const localPath = getLocalStoragePath(projectRoot);
+      const localHistoryPath = getHistoryPath(localPath);
+      const globalHistoryPath = getHistoryPath(this.globalPath);
+
+      // Check if local storage exists
+      if (!(await pathExists(localHistoryPath))) {
+        return {
+          success: false,
+          filesProcessed: 0,
+          errors: [new Error('Local storage not initialized')],
+          duration: Date.now() - startTime,
+        };
+      }
+
+      // Ensure global storage directory exists
+      await mkdir(globalHistoryPath, { recursive: true });
+
+      // Get all conversation files from local storage
+      const localFiles = await this.getConversationFiles(localHistoryPath);
+
+      // Copy all files to global storage
+      for (const file of localFiles) {
+        try {
+          const sourcePath = join(localHistoryPath, file);
+          const destPath = join(globalHistoryPath, file);
+
+          // Always copy to ensure global has latest version
+          await copyFile(sourcePath, destPath);
+          filesProcessed++;
+        } catch (error) {
+          errors.push(
+            error instanceof Error
+              ? error
+              : new Error(`Failed to copy ${file} to global`)
+          );
+        }
+      }
+
+      return {
+        success: errors.length === 0,
+        filesProcessed,
+        errors,
+        duration: Date.now() - startTime,
+      };
+    } catch (error) {
+      errors.push(
+        error instanceof Error
+          ? error
+          : new Error('Reverse sync failed')
+      );
+      return {
+        success: false,
+        filesProcessed,
+        errors,
+        duration: Date.now() - startTime,
+      };
+    }
+  }
+
+  /**
    * Get all conversation files in a directory
    */
   private async getConversationFiles(directoryPath: string): Promise<string[]> {

@@ -60,6 +60,41 @@ Watch for changes and automatically sync:
 claude-local watch
 ```
 
+## Common Workflows
+
+### Moving a Project to a New Machine/Location
+
+When you move your project (via git clone, cloud storage, etc.), the conversation history moves with it in the `.claude` folder. To make these conversations available in Claude Code:
+
+```bash
+# Navigate to your project
+cd /path/to/your/project
+
+# Restore conversations to global storage
+claude-local sync --to-global
+
+# Now use Claude Code as normal
+claude
+
+# Use /resume to access your conversations
+```
+
+**What happens:**
+1. Your local `.claude/history/` contains all the conversations
+2. `sync --to-global` copies them to Claude Code's global storage
+3. `/resume` in Claude Code now shows your project's conversations
+
+### Backing Up Before Moving
+
+Before moving a project, ensure conversations are saved locally:
+
+```bash
+cd /path/to/your/project
+claude-local sync  # Pull latest from global
+git add .claude/
+git commit -m "Backup conversation history"
+```
+
 ## Usage
 
 ### Commands
@@ -84,12 +119,21 @@ Sync conversations between global and local storage.
 
 Options:
 - `--from-global`: Sync from global to local (default)
+- `--to-global`: Sync from local to global (makes conversations available in Claude Code)
 - `--bidirectional`: Sync in both directions
 - `--dry-run`: Show what would be synced without syncing
 
 ```bash
+# Import conversations from global to local
 claude-local sync
+
+# Export local conversations to global (for /resume in Claude Code)
+claude-local sync --to-global
+
+# Sync both directions
 claude-local sync --bidirectional
+
+# Preview changes
 claude-local sync --dry-run
 ```
 
