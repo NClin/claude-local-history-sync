@@ -1,6 +1,6 @@
-# Claude Local Storage
+# Claude Sync
 
-**Local conversation history storage for Claude Code** - Keep your Claude Code conversation history with your project in a `.claude` folder, just like `.git`!
+**Sync Claude Code conversation history locally** - Keep your Claude Code conversation history with your project in a `.claude` folder, just like `.git`!
 
 ## Problem
 
@@ -19,13 +19,13 @@ Currently, Claude Code stores all conversation history globally. When you move a
 ## Installation
 
 ```bash
-npm install -g claude-local-storage
+npm install -g claude-sync
 ```
 
 Or use with `npx`:
 
 ```bash
-npx claude-local-storage init
+npx claude-sync init
 ```
 
 ## Quick Start
@@ -36,10 +36,10 @@ npx claude-local-storage init
 
 ```bash
 # Install globally
-npm install -g claude-local-storage
+npm install -g claude-sync
 
 # Start the background daemon
-claude-local daemon start
+claude-sync daemon start
 ```
 
 **That's it!** The daemon now:
@@ -56,9 +56,9 @@ If you prefer manual control:
 
 ```bash
 cd /path/to/your/project
-claude-local init           # Initialize local storage
-claude-local sync           # Import existing conversations
-claude-local watch          # Watch for changes (optional)
+claude-sync init           # Initialize local storage
+claude-sync sync           # Import existing conversations
+claude-sync watch          # Watch for changes (optional)
 ```
 
 ## Common Workflows
@@ -75,7 +75,7 @@ cd project
 **Start a new project:**
 ```bash
 cd my-new-project
-claude-local init
+claude-sync init
 # Daemon automatically discovers and monitors it
 claude  # Use Claude Code normally
 ```
@@ -96,7 +96,7 @@ When you move your project (via git clone, cloud storage, etc.), the conversatio
 
 ```bash
 cd /path/to/your/project
-claude-local sync --to-global    # Restore to global
+claude-sync sync --to-global    # Restore to global
 claude                           # Use Claude Code
 # Use /resume to access conversations
 ```
@@ -105,7 +105,7 @@ claude                           # Use Claude Code
 
 ```bash
 cd /path/to/your/project
-claude-local sync  # Pull latest from global
+claude-sync sync  # Pull latest from global
 git add .claude/
 git commit -m "Backup conversation history"
 ```
@@ -114,7 +114,7 @@ git commit -m "Backup conversation history"
 
 ### Commands
 
-#### `claude-local init`
+#### `claude-sync init`
 
 Initialize local storage for the current project.
 
@@ -123,12 +123,12 @@ Options:
 - `--force`: Re-initialize even if already set up
 
 ```bash
-claude-local init
-claude-local init --no-gitignore
-claude-local init --force
+claude-sync init
+claude-sync init --no-gitignore
+claude-sync init --force
 ```
 
-#### `claude-local sync`
+#### `claude-sync sync`
 
 Sync conversations between global and local storage.
 
@@ -140,19 +140,19 @@ Options:
 
 ```bash
 # Import conversations from global to local
-claude-local sync
+claude-sync sync
 
 # Export local conversations to global (for /resume in Claude Code)
-claude-local sync --to-global
+claude-sync sync --to-global
 
 # Sync both directions
-claude-local sync --bidirectional
+claude-sync sync --bidirectional
 
 # Preview changes
-claude-local sync --dry-run
+claude-sync sync --dry-run
 ```
 
-#### `claude-local watch`
+#### `claude-sync watch`
 
 Watch for changes and automatically sync conversations.
 
@@ -160,55 +160,55 @@ Options:
 - `--bidirectional`: Sync in both directions
 
 ```bash
-claude-local watch
-claude-local watch --bidirectional
+claude-sync watch
+claude-sync watch --bidirectional
 ```
 
-#### `claude-local status`
+#### `claude-sync status`
 
 Show status of local and global storage, including conversation count and configuration.
 
 ```bash
-claude-local status
+claude-sync status
 ```
 
-#### `claude-local config`
+#### `claude-sync config`
 
 Manage configuration.
 
 ```bash
 # Set storage mode (global, local, or hybrid)
-claude-local config set-mode local
+claude-sync config set-mode local
 
 # Set custom global storage path
-claude-local config set-global-path /custom/path
+claude-sync config set-global-path /custom/path
 
 # Enable/disable auto-sync
-claude-local config auto-sync true
+claude-sync config auto-sync true
 
 # Show current configuration
-claude-local config show
+claude-sync config show
 
 # Reset to defaults
-claude-local config reset
+claude-sync config reset
 ```
 
-####  `claude-local daemon` (Automatic Mode)
+####  `claude-sync daemon` (Automatic Mode)
 
 Manage the background sync daemon for automatic, transparent syncing.
 
 ```bash
 # Start the daemon (monitors ~/Projects, ~/code, ~/src by default)
-claude-local daemon start
+claude-sync daemon start
 
 # Start with custom paths
-claude-local daemon start --paths ~/work ~/personal/projects
+claude-sync daemon start --paths ~/work ~/personal/projects
 
 # Check daemon status
-claude-local daemon status
+claude-sync daemon status
 
 # Stop the daemon
-claude-local daemon stop
+claude-sync daemon stop
 ```
 
 **What the daemon does:**
@@ -225,7 +225,7 @@ claude-local daemon stop
 Conversations are stored only in the project's `.claude` folder. Perfect for keeping history portable with your project.
 
 ```bash
-claude-local config set-mode local
+claude-sync config set-mode local
 ```
 
 ### Global Mode
@@ -233,7 +233,7 @@ claude-local config set-mode local
 Conversations are stored in the global Claude Code directory (original behavior). Use this to disable local storage temporarily.
 
 ```bash
-claude-local config set-mode global
+claude-sync config set-mode global
 ```
 
 ### Hybrid Mode
@@ -241,7 +241,7 @@ claude-local config set-mode global
 Conversations are synced to both locations. Best of both worlds!
 
 ```bash
-claude-local config set-mode hybrid
+claude-sync config set-mode hybrid
 ```
 
 ## Project Structure
@@ -274,9 +274,9 @@ This ensures conversation history stays local and doesn't pollute your git repos
 
 Configuration is stored globally at:
 
-- **macOS**: `~/Library/Application Support/claude-local-storage/config.json`
-- **Linux**: `~/.config/claude-local-storage/config.json`
-- **Windows**: `%APPDATA%/claude-local-storage/config.json`
+- **macOS**: `~/Library/Application Support/claude-sync/config.json`
+- **Linux**: `~/.config/claude-sync/config.json`
+- **Windows**: `%APPDATA%/claude-sync/config.json`
 
 Default configuration:
 
@@ -304,7 +304,7 @@ import {
   ProjectDetector,
   ConfigManager,
   HistoryWatcher,
-} from 'claude-local-storage';
+} from 'claude-sync';
 
 // Initialize storage
 const storageManager = new StorageManager();
@@ -341,9 +341,9 @@ config.setMode('local');
 ### Conversations not syncing
 
 Make sure:
-1. Local storage is initialized: `claude-local init`
-2. You've run sync: `claude-local sync`
-3. The conversations actually belong to this project (check with `claude-local status`)
+1. Local storage is initialized: `claude-sync init`
+2. You've run sync: `claude-sync sync`
+3. The conversations actually belong to this project (check with `claude-sync status`)
 
 ### Permission errors
 
@@ -367,8 +367,8 @@ The tool uses git to detect project roots. If you're not in a git repository, it
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/claude-local-storage.git
-cd claude-local-storage
+git clone https://github.com/NClin/claude-local-history-sync.git
+cd claude-local-history-sync
 
 # Install dependencies
 npm install
@@ -433,9 +433,9 @@ A: All conversation data stays on your machine. This tool only moves files betwe
 
 ## Support
 
-- Report bugs via [GitHub Issues](https://github.com/yourusername/claude-local-storage/issues)
-- Ask questions in [Discussions](https://github.com/yourusername/claude-local-storage/discussions)
-- Contribute via [Pull Requests](https://github.com/yourusername/claude-local-storage/pulls)
+- Report bugs via [GitHub Issues](https://github.com/NClin/claude-local-history-sync/issues)
+- Ask questions in [Discussions](https://github.com/NClin/claude-local-history-sync/discussions)
+- Contribute via [Pull Requests](https://github.com/NClin/claude-local-history-sync/pulls)
 
 ---
 

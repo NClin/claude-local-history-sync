@@ -1,11 +1,11 @@
 {
-  "name": "claude-local-storage",
+  "name": "claude-sync",
   "version": "0.1.0",
-  "description": "Local conversation history storage for Claude Code - stores history in project .claude folders",
+  "description": "Sync Claude Code conversation history locally - stores history in project .claude folders",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "claude-local": "dist/cli.js"
+    "claude-sync": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
@@ -23,8 +23,16 @@
     "conversation-history",
     "git"
   ],
-  "author": "",
+  "author": "NClin",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NClin/claude-local-history-sync.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NClin/claude-local-history-sync/issues"
+  },
+  "homepage": "https://github.com/NClin/claude-local-history-sync#readme",
   "dependencies": {
     "commander": "^11.1.0",
     "chokidar": "^3.5.3",

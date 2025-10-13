@@ -25,226 +25,79 @@ describe('CLI Integration', () => {
       const { stdout } = await execAsync(`node "${cliPath}" --help`);
 
       expect(stdout).toContain('claude-local');
-      expect(stdout).toContain('init');
       expect(stdout).toContain('sync');
-      expect(stdout).toContain('watch');
-      expect(stdout).toContain('status');
-      expect(stdout).toContain('config');
       expect(stdout).toContain('daemon');
-    });
-
-    it('should display init help', async () => {
-      const { stdout } = await execAsync(`node "${cliPath}" init --help`);
-
-      expect(stdout).toContain('Initialize local storage');
-      expect(stdout).toContain('--no-gitignore');
-      expect(stdout).toContain('--force');
+      expect(stdout).toContain('Automatic conversation sync');
     });
 
     it('should display sync help', async () => {
       const { stdout } = await execAsync(`node "${cliPath}" sync --help`);
 
-      expect(stdout).toContain('Sync conversations');
-      expect(stdout).toContain('--from-global');
-      expect(stdout).toContain('--to-global');
-      expect(stdout).toContain('--bidirectional');
-      expect(stdout).toContain('--dry-run');
+      expect(stdout).toContain('Sync all conversations');
+      expect(stdout).toContain('bidirectionally');
+      expect(stdout).toContain('auto-initializes');
     });
 
     it('should display daemon help', async () => {
       const { stdout } = await execAsync(`node "${cliPath}" daemon --help`);
 
-      expect(stdout).toContain('Manage background');
+      expect(stdout).toContain('automatic background sync');
       expect(stdout).toContain('start');
       expect(stdout).toContain('stop');
-      expect(stdout).toContain('status');
     });
   });
 
-  describe('init command', () => {
-    it('should initialize local storage', async () => {
+  describe('sync command', () => {
+    it('should auto-initialize and sync', async () => {
       const { stdout } = await execAsync(
-        `cd "${testDir}" && node "${cliPath}" init --no-gitignore`
+        `cd "${testDir}" && node "${cliPath}" sync`
       );
 
       expect(stdout).toContain('Initializing local storage');
       expect(stdout).toContain('Local storage initialized');
+      expect(stdout).toContain('Syncing conversations');
+      expect(stdout).toContain('Synced');
 
       // Check if .claude directory was created
       const { stdout: lsOutput } = await execAsync(`ls -la "${testDir}"`);
       expect(lsOutput).toContain('.claude');
     });
 
-    it('should handle already initialized storage', async () => {
-      // Initialize once
-      await execAsync(
-        `cd "${testDir}" && node "${cliPath}" init --no-gitignore`
-      );
+    it('should sync without re-initializing if already initialized', async () => {
+      // First sync (initializes)
+      await execAsync(`cd "${testDir}" && node "${cliPath}" sync`);
 
-      // Try to initialize again
-      const { stdout } = await execAsync(
-        `cd "${testDir}" && node "${cliPath}" init --no-gitignore`
-      );
-
-      expect(stdout).toContain('already initialized');
-    });
-
-    it('should force re-initialization with --force', async () => {
-      // Initialize once
-      await execAsync(
-        `cd "${testDir}" && node "${cliPath}" init --no-gitignore`
-      );
-
-      // Force re-initialize
-      const { stdout } = await execAsync(
-        `cd "${testDir}" && node "${cliPath}" init --no-gitignore --force`
-      );
-
-      expect(stdout).toContain('Local storage initialized');
-    });
-  });
-
-  describe('status command', () => {
-    it('should show status without initialization', async () => {
-      const { stdout } = await execAsync(
-        `cd "${testDir}" && node "${cliPath}" status`
-      );
-
-      expect(stdout).toContain('Project Information');
-      expect(stdout).toContain('Not initialized');
-      expect(stdout).toContain('Configuration');
-    });
-
-    it('should show status after initialization', async () => {
-      await execAsync(
-        `cd "${testDir}" && node "${cliPath}" init --no-gitignore`
-      );
-
-      const { stdout } = await execAsync(
-        `cd "${testDir}" && node "${cliPath}" status`
-      );
-
-      expect(stdout).toContain('Project Information');
-      expect(stdout).toContain('Initialized');
-      expect(stdout).toContain('Storage Locations');
-    });
-  });
-
-  describe('sync command', () => {
-    it('should require initialization before sync', async () => {
+      // Second sync (should not re-initialize)
       const { stdout } = await execAsync(
         `cd "${testDir}" && node "${cliPath}" sync`
       );
 
-      expect(stdout).toContain('not initialized');
-      expect(stdout).toContain('Run `claude-local init` first');
-    });
-
-    it('should sync after initialization', async () => {
-      await execAsync(
-        `cd "${testDir}" && node "${cliPath}" init --no-gitignore`
-      );
-
-      const { stdout } = await execAsync(
-        `cd "${testDir}" && node "${cliPath}" sync`
-      );
-
+      expect(stdout).not.toContain('Initializing local storage');
       expect(stdout).toContain('Syncing conversations');
       expect(stdout).toContain('Synced');
     });
 
-    it('should handle dry-run option', async () => {
-      await execAsync(
-        `cd "${testDir}" && node "${cliPath}" init --no-gitignore`
-      );
-
+    it('should always perform bidirectional sync', async () => {
       const { stdout } = await execAsync(
-        `cd "${testDir}" && node "${cliPath}" sync --dry-run`
+        `cd "${testDir}" && node "${cliPath}" sync`
       );
 
-      expect(stdout).toContain('Dry run');
-      expect(stdout).toContain('no files will be modified');
-    });
-  });
-
-  describe('config commands', () => {
-    it('should show configuration', async () => {
-      const { stdout } = await execAsync(`node "${cliPath}" config show`);
-
-      expect(stdout).toContain('Configuration');
-      expect(stdout).toContain('mode');
-      expect(stdout).toContain('autoSync');
-      expect(stdout).toContain('autoGitignore');
-    });
-
-    it('should set storage mode', async () => {
-      const { stdout } = await execAsync(
-        `node "${cliPath}" config set-mode hybrid`
-      );
-
-      expect(stdout).toContain('Storage mode set to: hybrid');
-    });
-
-    it('should reject invalid mode', async () => {
-      try {
-        await execAsync(`node "${cliPath}" config set-mode invalid`);
-        expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.message).toContain('Invalid mode');
-      }
-    });
-
-    it('should enable auto-sync', async () => {
-      const { stdout } = await execAsync(
-        `node "${cliPath}" config auto-sync true`
-      );
-
-      expect(stdout).toContain('Auto-sync enabled');
-    });
-
-    it('should disable auto-sync', async () => {
-      const { stdout } = await execAsync(
-        `node "${cliPath}" config auto-sync false`
-      );
-
-      expect(stdout).toContain('Auto-sync disabled');
-    });
-
-    it('should set custom global path', async () => {
-      const customPath = '/custom/test/path';
-      const { stdout } = await execAsync(
-        `node "${cliPath}" config set-global-path "${customPath}"`
-      );
-
-      expect(stdout).toContain('Global storage path set to');
-      expect(stdout).toContain(customPath);
-    });
-
-    it('should reset configuration', async () => {
-      // Change some settings
-      await execAsync(`node "${cliPath}" config set-mode global`);
-      await execAsync(`node "${cliPath}" config auto-sync false`);
-
-      // Reset
-      const { stdout } = await execAsync(`node "${cliPath}" config reset`);
-
-      expect(stdout).toContain('Configuration reset to defaults');
-
-      // Verify reset
-      const { stdout: configOutput } = await execAsync(
-        `node "${cliPath}" config show`
-      );
-      expect(configOutput).toContain('"mode": "local"');
-      expect(configOutput).toContain('"autoSync": true');
+      expect(stdout).toContain('bidirectional');
     });
   });
 
   describe('daemon commands', () => {
-    it('should show daemon status when not running', async () => {
-      const { stdout } = await execAsync(`node "${cliPath}" daemon status`);
+    it('should display start command info', async () => {
+      const { stdout } = await execAsync(`node "${cliPath}" daemon start --help`);
 
-      expect(stdout).toContain('Daemon Status');
-      expect(stdout).toContain('Not running');
+      expect(stdout).toContain('Start automatic background sync');
+      expect(stdout).toContain('--paths');
+    });
+
+    it('should display stop command info', async () => {
+      const { stdout } = await execAsync(`node "${cliPath}" daemon stop --help`);
+
+      expect(stdout).toContain('Stop automatic background sync');
     });
 
     // Note: We don't test daemon start/stop in CI as it's a long-running process
@@ -270,24 +123,25 @@ describe('CLI Integration', () => {
   });
 
   describe('workflow integration', () => {
-    it('should complete full init -> status -> sync workflow', async () => {
-      // Init
-      const { stdout: initOutput } = await execAsync(
-        `cd "${testDir}" && node "${cliPath}" init --no-gitignore`
-      );
-      expect(initOutput).toContain('Local storage initialized');
-
-      // Status
-      const { stdout: statusOutput } = await execAsync(
-        `cd "${testDir}" && node "${cliPath}" status`
-      );
-      expect(statusOutput).toContain('Initialized');
-
-      // Sync
+    it('should complete full sync workflow with auto-initialization', async () => {
+      // Sync (auto-initializes)
       const { stdout: syncOutput } = await execAsync(
         `cd "${testDir}" && node "${cliPath}" sync`
       );
+
+      expect(syncOutput).toContain('Initializing local storage');
+      expect(syncOutput).toContain('Local storage initialized');
+      expect(syncOutput).toContain('Syncing conversations');
       expect(syncOutput).toContain('Synced');
+
+      // Subsequent sync (no re-initialization)
+      const { stdout: sync2Output } = await execAsync(
+        `cd "${testDir}" && node "${cliPath}" sync`
+      );
+
+      expect(sync2Output).not.toContain('Initializing local storage');
+      expect(sync2Output).toContain('Syncing conversations');
+      expect(sync2Output).toContain('Synced');
     });
   });
 });
