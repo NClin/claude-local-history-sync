@@ -73,13 +73,11 @@ export async function updateGitignore(
 
 /**
  * Get recommended .gitignore entries for Claude Code local storage
+ * By default, we don't add any entries to respect user privacy settings
+ * Users can manually add .claude/history/ to git if they want to commit it
  */
 export function getRecommendedGitignoreEntries(): string[] {
-  return [
-    '/.claude/history/',
-    '/.claude/*.log',
-    '/.claude/cache/',
-  ];
+  return [];
 }
 
 /**

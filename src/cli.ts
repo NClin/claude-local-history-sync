@@ -41,16 +41,8 @@ program
 
         await storageManager.initializeLocalStorage(project.root);
         console.log(chalk.green('✓ Local storage initialized'));
-
-        // Add .gitignore entries if this is a git repo
-        if (project.isGitRepo) {
-          console.log(chalk.blue('Updating .gitignore...'));
-          await updateGitignore(
-            project.root,
-            getRecommendedGitignoreEntries()
-          );
-          console.log(chalk.green('✓ .gitignore updated'));
-        }
+        console.log(chalk.gray('Note: .claude/history/ is not automatically gitignored'));
+        console.log(chalk.gray('Add it to .gitignore manually if you want to keep it private'));
       }
 
       // Always do bidirectional sync
