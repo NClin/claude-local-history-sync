@@ -1,0 +1,23 @@
+{
+  "name": "claude-sync",
+  "version": "0.1.0",
+  "description": "Sync Claude Code conversation history locally - stores history in project .claude folders for portability across machines",
+  "author": {
+    "name": "NClin",
+    "url": "https://github.com/NClin"
+  },
+  "homepage": "https://github.com/NClin/claude-local-history-sync#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NClin/claude-local-history-sync.git"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sync",
+    "conversation-history",
+    "local-storage",
+    "portable",
+    "backup",
+    "git"
+  ]
+}

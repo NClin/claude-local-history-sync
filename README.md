@@ -18,6 +18,23 @@ Currently, Claude Code stores all conversation history globally. When you move a
 
 ## Installation
 
+### As a Claude Code Plugin (Recommended)
+
+Install directly from Claude Code:
+
+```bash
+/plugin marketplace add NClin/claude-local-history-sync
+/plugin install claude-sync
+```
+
+This gives you:
+- Slash commands (`/sync init`, `/sync status`, `/sync daemon start`, etc.)
+- Automatic hooks for syncing
+- Native integration with Claude Code
+- See [PLUGIN.md](PLUGIN.md) for plugin documentation
+
+### As a Standalone NPM Package
+
 ```bash
 npm install -g claude-sync
 ```
