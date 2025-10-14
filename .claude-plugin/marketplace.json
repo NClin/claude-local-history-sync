@@ -10,7 +10,7 @@
       "name": "claude-sync",
       "source": "./",
       "description": "Sync Claude Code conversation history locally - stores history in project .claude folders for portability across machines",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "keywords": [
         "sync",
         "conversation-history",

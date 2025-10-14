@@ -1,18 +1,10 @@
 {
   "hooks": [
     {
-      "name": "auto-sync-on-start",
-      "description": "Automatically sync conversations when entering a project",
+      "name": "auto-sync",
+      "description": "Real-time bidirectional sync of conversation history",
       "type": "user-prompt-submit",
-      "command": "npx --yes claude-sync sync --to-global --dry-run > /dev/null 2>&1 && echo '✓ Conversations synced to global storage' || true",
-      "enabled": false,
-      "blocking": false
-    },
-    {
-      "name": "check-sync-status",
-      "description": "Show sync status notification when starting Claude Code",
-      "type": "user-prompt-submit",
-      "command": "if [ -d .claude/history ]; then echo '💾 Claude Sync: Use /sync status to check conversation sync status'; fi",
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/sync.sh",
       "enabled": true,
       "blocking": false
     }
