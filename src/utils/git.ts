@@ -72,12 +72,61 @@ export async function updateGitignore(
 }
 
 /**
+ * Remove entries from .gitignore
+ */
+export async function removeFromGitignore(
+  projectRoot: string,
+  entries: string[]
+): Promise<void> {
+  const gitignorePath = join(projectRoot, '.gitignore');
+  const exists = await pathExists(gitignorePath);
+
+  if (!exists) {
+    return; // Nothing to remove
+  }
+
+  const content = await readFile(gitignorePath, 'utf-8');
+  const lines = content.split('\n');
+
+  // Remove the specified entries and the Claude Code header
+  const filteredLines = lines.filter(line => {
+    const trimmed = line.trim();
+    if (trimmed === '# Claude Code local storage') {
+      return false;
+    }
+    return !entries.some(entry => trimmed === entry || trimmed === entry.replace(/^\//, ''));
+  });
+
+  // Remove consecutive empty lines
+  const cleanedLines: string[] = [];
+  let previousEmpty = false;
+  for (const line of filteredLines) {
+    const isEmpty = line.trim() === '';
+    if (isEmpty && previousEmpty) {
+      continue;
+    }
+    cleanedLines.push(line);
+    previousEmpty = isEmpty;
+  }
+
+  // Write back, ensuring file ends with newline
+  let newContent = cleanedLines.join('\n');
+  if (newContent && !newContent.endsWith('\n')) {
+    newContent += '\n';
+  }
+
+  await writeFile(gitignorePath, newContent);
+}
+
+/**
  * Get recommended .gitignore entries for Claude Code local storage
- * By default, we don't add any entries to respect user privacy settings
- * Users can manually add .claude/history/ to git if they want to commit it
  */
 export function getRecommendedGitignoreEntries(): string[] {
-  return [];
+  return [
+    '/.claude/history/',
+    '/.claude/*.log',
+    '/.claude/cache/',
+  ];
 }
 
 /**

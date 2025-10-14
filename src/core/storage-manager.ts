@@ -36,47 +36,34 @@ export class StorageManager {
 
     // Create a README to explain the directory
     const readmePath = join(this.localPath, 'README.md');
-    const readmeContent = `# Claude Sync - Local Conversation History
+    const readmeContent = `# Claude Code Local Storage
 
 This directory contains local conversation history for this project.
 
 ## Structure
 
-- \`history/\`: Conversation history files (.jsonl format)
+- \`history/\`: Conversation history files
 - \`config.json\`: Local configuration (if present)
 
-## Git Integration
+## .gitignore
 
-By default, \`.claude/history/\` is **not** gitignored, allowing you to commit and share conversation history with your team.
+It's recommended to add the following to your .gitignore:
 
-### To Keep History Private
-
-Add to your \`.gitignore\`:
 \`\`\`
 /.claude/history/
+/.claude/*.log
+/.claude/cache/
 \`\`\`
 
-### To Share History with Team
-
-Simply commit the \`.claude/\` directory:
-\`\`\`bash
-git add .claude/
-git commit -m "Add conversation history"
-\`\`\`
-
-Team members can then run \`claude-sync sync\` or \`/sync daemon start\` to make conversations available in Claude Code.
+This ensures conversation history stays local and doesn't get committed to version control.
 
 ## Management
 
-Use \`claude-sync\` to manage local storage:
+Use \`claude-local\` CLI to manage local storage:
 
-- \`claude-sync sync\`: Sync conversations (auto-initializes)
-- \`claude-sync daemon start\`: Auto-sync all projects
-- \`claude-sync daemon status\`: Check daemon status
-
-Or use slash commands in Claude Code:
-- \`/sync status\`: Check sync status
-- \`/sync daemon start\`: Start background daemon
+- \`claude-local init\`: Initialize local storage
+- \`claude-local sync\`: Sync conversations
+- \`claude-local status\`: Check storage status
 `;
 
     const { writeFile } = await import('node:fs/promises');
