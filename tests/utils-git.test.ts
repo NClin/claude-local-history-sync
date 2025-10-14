@@ -103,21 +103,16 @@ describe('Git Utilities', () => {
   });
 
   describe('getRecommendedGitignoreEntries', () => {
-    it('should return standard entries', () => {
+    it('should return empty array (no automatic gitignore)', () => {
       const entries = getRecommendedGitignoreEntries();
 
-      expect(entries).toContain('/.claude/history/');
-      expect(entries).toContain('/.claude/*.log');
-      expect(entries).toContain('/.claude/cache/');
+      expect(entries).toEqual([]);
     });
 
-    it('should return array of strings', () => {
+    it('should return array', () => {
       const entries = getRecommendedGitignoreEntries();
 
       expect(Array.isArray(entries)).toBe(true);
-      entries.forEach((entry) => {
-        expect(typeof entry).toBe('string');
-      });
     });
   });
 

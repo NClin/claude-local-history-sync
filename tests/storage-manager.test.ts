@@ -41,7 +41,7 @@ describe('StorageManager', () => {
         join(projectRoot, '.claude', 'README.md'),
         'utf-8'
       );
-      expect(readme).toContain('Claude Code Local Storage');
+      expect(readme).toContain('Claude Sync');
     });
   });
 
