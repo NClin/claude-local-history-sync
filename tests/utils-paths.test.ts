@@ -15,20 +15,14 @@ describe('Path Utilities', () => {
     it('should return a valid path', () => {
       const path = getGlobalStoragePath();
       expect(path).toBeTruthy();
-      expect(path).toContain('Claude Code');
+      expect(path).toContain('.claude');
     });
 
-    it('should return platform-specific path', () => {
+    it('should return ~/.claude path for all platforms', () => {
       const path = getGlobalStoragePath();
-      const platform = process.platform;
-
-      if (platform === 'darwin') {
-        expect(path).toContain('Library/Application Support');
-      } else if (platform === 'win32') {
-        expect(path).toContain('AppData');
-      } else {
-        expect(path).toContain('.config');
-      }
+      // Claude Code actually stores in ~/.claude, not in Application Support
+      expect(path).toContain('.claude');
+      expect(path).toBe(join(require('os').homedir(), '.claude'));
     });
   });
 

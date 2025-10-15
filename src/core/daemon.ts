@@ -4,7 +4,7 @@ import { readdir, stat } from 'node:fs/promises';
 import { StorageManager } from './storage-manager.js';
 import { ProjectDetector } from './project-detector.js';
 import { ConfigManager } from './config-manager.js';
-import { getHistoryPath, pathExists } from '../utils/paths.js';
+import { getHistoryPath, getGlobalProjectPath, pathExists } from '../utils/paths.js';
 
 interface MonitoredProject {
   root: string;
@@ -183,17 +183,19 @@ export class SyncDaemon {
 
   /**
    * Watch global storage for changes
+   * Claude Code stores projects in ~/.claude/projects/<project-hash>/
    */
   private async watchGlobalStorage(): Promise<void> {
     const globalPath = this.configManager.getGlobalStoragePath();
-    const globalHistoryPath = getHistoryPath(globalPath);
+    const globalProjectsPath = join(globalPath, 'projects');
 
-    if (!(await pathExists(globalHistoryPath))) {
-      console.log('[claude-local daemon] Global storage not found, skipping global watch');
+    if (!(await pathExists(globalProjectsPath))) {
+      console.log('[claude-local daemon] Global projects directory not found, skipping global watch');
       return;
     }
 
-    this.globalWatcher = watch(globalHistoryPath, {
+    // Watch all project directories in ~/.claude/projects/
+    this.globalWatcher = watch(join(globalProjectsPath, '*/*.jsonl'), {
       persistent: true,
       ignoreInitial: true,
       awaitWriteFinish: {
@@ -207,20 +209,26 @@ export class SyncDaemon {
     this.globalWatcher.on('all', async (event, filePath) => {
       console.log(`[claude-local daemon] Global change detected: ${event} ${filePath}`);
 
-      // Sync all monitored projects
+      // Determine which project this file belongs to by checking the parent directory
+      // and syncing only that specific project
       for (const project of this.projects.values()) {
-        const key = project.root;
+        const projectGlobalPath = getGlobalProjectPath(globalPath, project.root);
 
-        if (syncTimeouts.has(key)) {
-          clearTimeout(syncTimeouts.get(key)!);
+        if (filePath.startsWith(projectGlobalPath)) {
+          const key = project.root;
+
+          if (syncTimeouts.has(key)) {
+            clearTimeout(syncTimeouts.get(key)!);
+          }
+
+          const timeout = setTimeout(async () => {
+            await this.syncProject(project.root, 'to-local');
+            syncTimeouts.delete(key);
+          }, this.syncDebounceMs);
+
+          syncTimeouts.set(key, timeout);
+          break;
         }
-
-        const timeout = setTimeout(async () => {
-          await this.syncProject(project.root, 'to-local');
-          syncTimeouts.delete(key);
-        }, this.syncDebounceMs);
-
-        syncTimeouts.set(key, timeout);
       }
     });
   }

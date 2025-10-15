@@ -73,9 +73,11 @@ describe('StorageManager', () => {
       await mkdir(projectRoot, { recursive: true });
       await storageManager.initializeLocalStorage(projectRoot);
 
-      // Create mock conversation file in global storage
-      const globalHistory = join(testDir, 'global', 'history');
-      await mkdir(globalHistory, { recursive: true });
+      // Create mock conversation file in global storage using Claude Code's structure
+      // ~/.claude/projects/<encoded-path>/conversation.jsonl
+      const encodedPath = projectRoot.replace(/^\//, '').replace(/\//g, '-');
+      const globalProjectPath = join(testDir, 'global', 'projects', encodedPath);
+      await mkdir(globalProjectPath, { recursive: true });
 
       const conversationData = {
         workingDirectory: projectRoot,
@@ -83,7 +85,7 @@ describe('StorageManager', () => {
       };
 
       await writeFile(
-        join(globalHistory, 'conv-1.json'),
+        join(globalProjectPath, 'conv-1.jsonl'),
         JSON.stringify(conversationData)
       );
 
@@ -100,12 +102,18 @@ describe('StorageManager', () => {
       await mkdir(projectRoot, { recursive: true });
       await storageManager.initializeLocalStorage(projectRoot);
 
-      // Create mock conversation files
-      const globalHistory = join(testDir, 'global', 'history');
-      await mkdir(globalHistory, { recursive: true });
+      // Create mock conversation files in the new structure
+      const encodedPath = projectRoot.replace(/^\//, '').replace(/\//g, '-');
+      const encodedOther = otherProject.replace(/^\//, '').replace(/\//g, '-');
+
+      const globalProjectPath = join(testDir, 'global', 'projects', encodedPath);
+      const globalOtherPath = join(testDir, 'global', 'projects', encodedOther);
+
+      await mkdir(globalProjectPath, { recursive: true });
+      await mkdir(globalOtherPath, { recursive: true });
 
       await writeFile(
-        join(globalHistory, 'conv-project.json'),
+        join(globalProjectPath, 'conv-project.jsonl'),
         JSON.stringify({
           workingDirectory: projectRoot,
           messages: [],
@@ -113,7 +121,7 @@ describe('StorageManager', () => {
       );
 
       await writeFile(
-        join(globalHistory, 'conv-other.json'),
+        join(globalOtherPath, 'conv-other.jsonl'),
         JSON.stringify({
           workingDirectory: otherProject,
           messages: [],
@@ -180,8 +188,9 @@ describe('StorageManager', () => {
         title: 'Test Conversation',
       };
 
+      // Support both .json and .jsonl
       await writeFile(
-        join(localHistory, 'conv-test.json'),
+        join(localHistory, 'conv-test.jsonl'),
         JSON.stringify(conversationData)
       );
 
@@ -209,7 +218,7 @@ describe('StorageManager', () => {
       };
 
       await writeFile(
-        join(localHistory, 'conv-local.json'),
+        join(localHistory, 'conv-local.jsonl'),
         JSON.stringify(conversationData)
       );
 

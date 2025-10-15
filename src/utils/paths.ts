@@ -7,19 +7,8 @@ import { access, constants } from 'node:fs/promises';
  */
 export function getGlobalStoragePath(): string {
   const home = homedir();
-  const os = platform();
-
-  switch (os) {
-    case 'darwin': // macOS
-      return join(home, 'Library', 'Application Support', 'Claude Code');
-    case 'win32': // Windows
-      return join(process.env.APPDATA || join(home, 'AppData', 'Roaming'), 'Claude Code');
-    case 'linux':
-      return join(home, '.config', 'claude-code');
-    default:
-      // Fallback to Linux-style path
-      return join(home, '.config', 'claude-code');
-  }
+  // Claude Code stores projects in ~/.claude/projects
+  return join(home, '.claude');
 }
 
 /**
@@ -72,4 +61,23 @@ export function resolvePath(path: string): string {
  */
 export function normalizePath(path: string): string {
   return resolve(path);
+}
+
+/**
+ * Encode a project path to Claude Code's directory naming format
+ * Claude Code stores projects in ~/.claude/projects/ with directory names like:
+ * -Users-macbookair-Projects-myproject
+ */
+export function encodeProjectPath(projectPath: string): string {
+  // Replace all slashes with dashes (including leading slash becomes leading dash)
+  return projectPath.replace(/\//g, '-');
+}
+
+/**
+ * Get the global project storage path for a specific project
+ * Returns the path where Claude Code stores conversations for this project
+ */
+export function getGlobalProjectPath(globalStoragePath: string, projectRoot: string): string {
+  const encoded = encodeProjectPath(projectRoot);
+  return join(globalStoragePath, 'projects', encoded);
 }

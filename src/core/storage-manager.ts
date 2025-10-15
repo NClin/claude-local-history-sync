@@ -9,6 +9,7 @@ import {
   getGlobalStoragePath,
   getLocalStoragePath,
   getHistoryPath,
+  getGlobalProjectPath,
   pathExists,
   isWritable,
 } from '../utils/paths.js';
@@ -76,15 +77,26 @@ Use \`claude-local\` CLI to manage local storage:
   async getStorageLocations(
     projectRoot?: string
   ): Promise<{ global: StorageLocation; local: StorageLocation | null }> {
-    const globalHistoryPath = getHistoryPath(this.globalPath);
-    const globalExists = await pathExists(globalHistoryPath);
+    // For global storage, check if the projects directory exists
+    let globalPath: string;
+    let globalExists: boolean;
+
+    if (projectRoot) {
+      // Get the specific project's global storage path
+      globalPath = getGlobalProjectPath(this.globalPath, projectRoot);
+      globalExists = await pathExists(globalPath);
+    } else {
+      // Check if projects directory exists
+      globalPath = join(this.globalPath, 'projects');
+      globalExists = await pathExists(globalPath);
+    }
 
     const result: {
       global: StorageLocation;
       local: StorageLocation | null;
     } = {
       global: {
-        path: globalHistoryPath,
+        path: globalPath,
         type: 'global',
         exists: globalExists,
       },
@@ -120,15 +132,16 @@ Use \`claude-local\` CLI to manage local storage:
     try {
       const localPath = getLocalStoragePath(projectRoot);
       const localHistoryPath = getHistoryPath(localPath);
-      const globalHistoryPath = getHistoryPath(this.globalPath);
+      // Claude Code stores project conversations in ~/.claude/projects/<encoded-path>/
+      const globalProjectPath = getGlobalProjectPath(this.globalPath, projectRoot);
 
       // Ensure local storage is initialized
       if (!(await pathExists(localHistoryPath))) {
         await this.initializeLocalStorage(projectRoot);
       }
 
-      // Check if global storage exists
-      if (!(await pathExists(globalHistoryPath))) {
+      // Check if global storage exists for this project
+      if (!(await pathExists(globalProjectPath))) {
         return {
           success: true,
           filesProcessed: 0,
@@ -137,23 +150,20 @@ Use \`claude-local\` CLI to manage local storage:
         };
       }
 
-      // Get conversation files from global storage
-      const files = await this.getConversationFiles(globalHistoryPath);
-
-      // Filter files that belong to this project
-      const projectFiles = await this.filterProjectFiles(
-        files,
-        projectRoot,
-        globalHistoryPath
-      );
+      // Get conversation files from global storage (now .jsonl files)
+      const files = await this.getConversationFiles(globalProjectPath);
 
       // Copy files to local storage
-      for (const file of projectFiles) {
+      for (const file of files) {
         try {
-          const sourcePath = join(globalHistoryPath, file);
+          const sourcePath = join(globalProjectPath, file);
           const destPath = join(localHistoryPath, file);
-          await copyFile(sourcePath, destPath);
-          filesProcessed++;
+          // Only copy if file doesn't exist or is newer
+          const shouldCopy = await this.shouldCopyFile(sourcePath, destPath);
+          if (shouldCopy) {
+            await copyFile(sourcePath, destPath);
+            filesProcessed++;
+          }
         } catch (error) {
           errors.push(
             error instanceof Error
@@ -169,13 +179,14 @@ Use \`claude-local\` CLI to manage local storage:
         for (const file of localFiles) {
           try {
             const sourcePath = join(localHistoryPath, file);
-            const destPath = join(globalHistoryPath, file);
+            const destPath = join(globalProjectPath, file);
             // Only copy if file doesn't exist in global or is newer
             const shouldCopy = await this.shouldCopyFile(
               sourcePath,
               destPath
             );
             if (shouldCopy) {
+              await mkdir(globalProjectPath, { recursive: true });
               await copyFile(sourcePath, destPath);
               filesProcessed++;
             }
@@ -222,7 +233,7 @@ Use \`claude-local\` CLI to manage local storage:
     try {
       const localPath = getLocalStoragePath(projectRoot);
       const localHistoryPath = getHistoryPath(localPath);
-      const globalHistoryPath = getHistoryPath(this.globalPath);
+      const globalProjectPath = getGlobalProjectPath(this.globalPath, projectRoot);
 
       // Check if local storage exists
       if (!(await pathExists(localHistoryPath))) {
@@ -235,7 +246,7 @@ Use \`claude-local\` CLI to manage local storage:
       }
 
       // Ensure global storage directory exists
-      await mkdir(globalHistoryPath, { recursive: true });
+      await mkdir(globalProjectPath, { recursive: true });
 
       // Get all conversation files from local storage
       const localFiles = await this.getConversationFiles(localHistoryPath);
@@ -244,7 +255,7 @@ Use \`claude-local\` CLI to manage local storage:
       for (const file of localFiles) {
         try {
           const sourcePath = join(localHistoryPath, file);
-          const destPath = join(globalHistoryPath, file);
+          const destPath = join(globalProjectPath, file);
 
           // Always copy to ensure global has latest version
           await copyFile(sourcePath, destPath);
@@ -281,12 +292,13 @@ Use \`claude-local\` CLI to manage local storage:
 
   /**
    * Get all conversation files in a directory
+   * Supports both .json and .jsonl files (Claude Code uses .jsonl)
    */
   private async getConversationFiles(directoryPath: string): Promise<string[]> {
     try {
       const entries = await readdir(directoryPath, { withFileTypes: true });
       return entries
-        .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+        .filter((entry) => entry.isFile() && (entry.name.endsWith('.json') || entry.name.endsWith('.jsonl')))
         .map((entry) => entry.name);
     } catch {
       return [];
@@ -388,8 +400,13 @@ Use \`claude-local\` CLI to manage local storage:
         const data = JSON.parse(content);
         const fileStat = await stat(filePath);
 
+        // Strip both .json and .jsonl extensions
+        const id = file.endsWith('.jsonl')
+          ? basename(file, '.jsonl')
+          : basename(file, '.json');
+
         metadata.push({
-          id: basename(file, '.json'),
+          id,
           projectPath: data.workingDirectory || data.cwd || 'unknown',
           createdAt: fileStat.birthtime.toISOString(),
           updatedAt: fileStat.mtime.toISOString(),

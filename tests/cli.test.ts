@@ -24,83 +24,64 @@ describe('CLI Integration', () => {
     it('should display main help', async () => {
       const { stdout } = await execAsync(`node "${cliPath}" --help`);
 
-      expect(stdout).toContain('claude-local');
-      expect(stdout).toContain('sync');
-      expect(stdout).toContain('daemon');
+      expect(stdout).toContain('claude-sync');
+      expect(stdout).toContain('enable');
+      expect(stdout).toContain('disable');
+      expect(stdout).toContain('status');
       expect(stdout).toContain('Automatic conversation sync');
     });
 
-    it('should display sync help', async () => {
-      const { stdout } = await execAsync(`node "${cliPath}" sync --help`);
+    it('should display enable help', async () => {
+      const { stdout } = await execAsync(`node "${cliPath}" enable --help`);
 
-      expect(stdout).toContain('Sync all conversations');
-      expect(stdout).toContain('bidirectionally');
-      expect(stdout).toContain('auto-initializes');
-    });
-
-    it('should display daemon help', async () => {
-      const { stdout } = await execAsync(`node "${cliPath}" daemon --help`);
-
-      expect(stdout).toContain('automatic background sync');
-      expect(stdout).toContain('start');
-      expect(stdout).toContain('stop');
-    });
-  });
-
-  describe('sync command', () => {
-    it('should auto-initialize and sync', async () => {
-      const { stdout } = await execAsync(
-        `cd "${testDir}" && node "${cliPath}" sync`
-      );
-
-      expect(stdout).toContain('Initializing local storage');
-      expect(stdout).toContain('Local storage initialized');
-      expect(stdout).toContain('Syncing conversations');
-      expect(stdout).toContain('Synced');
-
-      // Check if .claude directory was created
-      const { stdout: lsOutput } = await execAsync(`ls -la "${testDir}"`);
-      expect(lsOutput).toContain('.claude');
-    });
-
-    it('should sync without re-initializing if already initialized', async () => {
-      // First sync (initializes)
-      await execAsync(`cd "${testDir}" && node "${cliPath}" sync`);
-
-      // Second sync (should not re-initialize)
-      const { stdout } = await execAsync(
-        `cd "${testDir}" && node "${cliPath}" sync`
-      );
-
-      expect(stdout).not.toContain('Initializing local storage');
-      expect(stdout).toContain('Syncing conversations');
-      expect(stdout).toContain('Synced');
-    });
-
-    it('should always perform bidirectional sync', async () => {
-      const { stdout } = await execAsync(
-        `cd "${testDir}" && node "${cliPath}" sync`
-      );
-
-      expect(stdout).toContain('bidirectional');
-    });
-  });
-
-  describe('daemon commands', () => {
-    it('should display start command info', async () => {
-      const { stdout } = await execAsync(`node "${cliPath}" daemon start --help`);
-
-      expect(stdout).toContain('Start automatic background sync');
+      expect(stdout).toContain('Enable automatic conversation syncing');
       expect(stdout).toContain('--paths');
     });
 
-    it('should display stop command info', async () => {
-      const { stdout } = await execAsync(`node "${cliPath}" daemon stop --help`);
+    it('should display status help', async () => {
+      const { stdout } = await execAsync(`node "${cliPath}" status --help`);
 
-      expect(stdout).toContain('Stop automatic background sync');
+      expect(stdout).toContain('Show sync status');
+    });
+  });
+
+  describe('status command', () => {
+    it('should show disabled status when not running', async () => {
+      const { stdout } = await execAsync(
+        `cd "${testDir}" && node "${cliPath}" status`
+      );
+
+      // Check for checkmark or "Disabled" text
+      expect(stdout).toMatch(/Auto-sync.*(?:Disabled|○)/);
     });
 
-    // Note: We don't test daemon start/stop in CI as it's a long-running process
+    it('should detect current project', async () => {
+      // Create .claude directory to make it a valid project
+      await mkdir(join(testDir, '.claude', 'history'), { recursive: true });
+
+      const { stdout } = await execAsync(
+        `cd "${testDir}" && node "${cliPath}" status`
+      );
+
+      expect(stdout).toContain('Current project:');
+      expect(stdout).toContain(testDir);
+    });
+  });
+
+  describe('gitignore commands', () => {
+    it('should display gitenable help', async () => {
+      const { stdout } = await execAsync(`node "${cliPath}" gitenable --help`);
+
+      expect(stdout).toContain('Add conversation history to .gitignore');
+    });
+
+    it('should display gitdisable help', async () => {
+      const { stdout } = await execAsync(`node "${cliPath}" gitdisable --help`);
+
+      expect(stdout).toContain('Remove conversation history from .gitignore');
+    });
+
+    // Note: We don't test enable/disable in CI as they start long-running processes
     // These would be tested in manual/integration testing
   });
 
@@ -123,25 +104,17 @@ describe('CLI Integration', () => {
   });
 
   describe('workflow integration', () => {
-    it('should complete full sync workflow with auto-initialization', async () => {
-      // Sync (auto-initializes)
-      const { stdout: syncOutput } = await execAsync(
-        `cd "${testDir}" && node "${cliPath}" sync`
+    it('should show status for current project', async () => {
+      // Create .claude directory to make it a valid project
+      await mkdir(join(testDir, '.claude', 'history'), { recursive: true });
+
+      const { stdout } = await execAsync(
+        `cd "${testDir}" && node "${cliPath}" status`
       );
 
-      expect(syncOutput).toContain('Initializing local storage');
-      expect(syncOutput).toContain('Local storage initialized');
-      expect(syncOutput).toContain('Syncing conversations');
-      expect(syncOutput).toContain('Synced');
-
-      // Subsequent sync (no re-initialization)
-      const { stdout: sync2Output } = await execAsync(
-        `cd "${testDir}" && node "${cliPath}" sync`
-      );
-
-      expect(sync2Output).not.toContain('Initializing local storage');
-      expect(sync2Output).toContain('Syncing conversations');
-      expect(sync2Output).toContain('Synced');
+      expect(stdout).toContain('Claude Sync Status');
+      expect(stdout).toContain('Current project:');
+      expect(stdout).toContain('Local storage: Yes');
     });
   });
 });

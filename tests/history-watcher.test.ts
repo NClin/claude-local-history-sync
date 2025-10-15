@@ -78,9 +78,10 @@ describe('HistoryWatcher', () => {
     });
 
     it('should call callback on file events', async () => {
-      // Create global history directory first
-      const globalHistory = join(globalPath, 'history');
-      await mkdir(globalHistory, { recursive: true });
+      // Create global project directory using Claude Code's structure
+      const encodedPath = projectRoot.replace(/^\//, '').replace(/\//g, '-');
+      const globalProjectPath = join(globalPath, 'projects', encodedPath);
+      await mkdir(globalProjectPath, { recursive: true });
 
       const callback = vi.fn();
       watcher.on(callback);
@@ -99,7 +100,7 @@ describe('HistoryWatcher', () => {
       };
 
       await writeFile(
-        join(globalHistory, 'test-conv.json'),
+        join(globalProjectPath, 'test-conv.jsonl'),
         JSON.stringify(conversationData)
       );
 
@@ -116,9 +117,10 @@ describe('HistoryWatcher', () => {
 
   describe('file synchronization', () => {
     it('should sync new files from global to local', async () => {
-      // Create global history directory first
-      const globalHistory = join(globalPath, 'history');
-      await mkdir(globalHistory, { recursive: true });
+      // Create global project directory using Claude Code's structure
+      const encodedPath = projectRoot.replace(/^\//, '').replace(/\//g, '-');
+      const globalProjectPath = join(globalPath, 'projects', encodedPath);
+      await mkdir(globalProjectPath, { recursive: true });
 
       await watcher.startWatching(globalPath, projectRoot, {
         ignoreInitial: true,
@@ -134,7 +136,7 @@ describe('HistoryWatcher', () => {
       };
 
       await writeFile(
-        join(globalHistory, 'sync-test.json'),
+        join(globalProjectPath, 'sync-test.jsonl'),
         JSON.stringify(conversationData)
       );
 
@@ -145,7 +147,7 @@ describe('HistoryWatcher', () => {
       const { readFile } = await import('node:fs/promises');
       const localHistory = join(projectRoot, '.claude', 'history');
       const localFile = await readFile(
-        join(localHistory, 'sync-test.json'),
+        join(localHistory, 'sync-test.jsonl'),
         'utf-8'
       );
       const localData = JSON.parse(localFile);
@@ -168,7 +170,7 @@ describe('HistoryWatcher', () => {
       };
 
       await writeFile(
-        join(localHistory, 'local-conv.json'),
+        join(localHistory, 'local-conv.jsonl'),
         JSON.stringify(conversationData)
       );
 
@@ -176,9 +178,9 @@ describe('HistoryWatcher', () => {
       await new Promise((resolve) => setTimeout(resolve, 4000));
 
       // Check if file was synced to global
-      const { readFile } = await import('node:fs/promises');
-      const globalHistory = join(globalPath, 'history');
-      await mkdir(globalHistory, { recursive: true });
+      const encodedPath = projectRoot.replace(/^\//, '').replace(/\//g, '-');
+      const globalProjectPath = join(globalPath, 'projects', encodedPath);
+      await mkdir(globalProjectPath, { recursive: true });
 
       // Note: In real implementation, this would sync automatically
       // For now, we test the watcher accepts the option

@@ -2,7 +2,7 @@ import chokidar, { type FSWatcher } from 'chokidar';
 import { join } from 'node:path';
 import { copyFile } from 'node:fs/promises';
 import { StorageManager } from './storage-manager.js';
-import { getHistoryPath } from '../utils/paths.js';
+import { getHistoryPath, getGlobalProjectPath } from '../utils/paths.js';
 
 export type WatcherEventType = 'add' | 'change' | 'unlink';
 
@@ -28,6 +28,7 @@ export class HistoryWatcher {
 
   /**
    * Start watching for changes in global storage
+   * Now watches the project-specific directory in ~/.claude/projects/<encoded-path>/
    */
   async startWatching(
     globalPath: string,
@@ -37,12 +38,13 @@ export class HistoryWatcher {
       ignoreInitial?: boolean;
     } = {}
   ): Promise<void> {
-    const historyPath = getHistoryPath(globalPath);
+    // Watch the project-specific global directory
+    const globalProjectPath = getGlobalProjectPath(globalPath, projectRoot);
     const localHistoryPath = getHistoryPath(
       join(projectRoot, '.claude')
     );
 
-    this.watcher = chokidar.watch(historyPath, {
+    this.watcher = chokidar.watch(globalProjectPath, {
       ignored: /(^|[\/\\])\../, // ignore dotfiles
       persistent: true,
       ignoreInitial: options.ignoreInitial ?? true,
@@ -77,10 +79,10 @@ export class HistoryWatcher {
 
       localWatcher
         .on('add', async (path) => {
-          await this.handleLocalFileEvent('add', path, historyPath);
+          await this.handleLocalFileEvent('add', path, globalProjectPath);
         })
         .on('change', async (path) => {
-          await this.handleLocalFileEvent('change', path, historyPath);
+          await this.handleLocalFileEvent('change', path, globalProjectPath);
         });
     }
   }
